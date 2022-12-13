@@ -12,9 +12,7 @@ module.exports = function (zipPath, opts, cb) {
     return cb(new Error('Target directory is expected to be absolute'))
   }
 
-  mkdirp(opts.dir, function (err) {
-    if (err) return cb(err)
-
+  mkdirp(opts.dir).then(function () {
     fs.realpath(opts.dir, function (err, canonicalDir) {
       if (err) return cb(err)
 
@@ -22,6 +20,8 @@ module.exports = function (zipPath, opts, cb) {
 
       openZip(opts)
     })
+  }).catch(function (err) {
+    return cb(err)
   })
 
   function openZip () {
@@ -57,13 +57,7 @@ module.exports = function (zipPath, opts, cb) {
 
         var destDir = path.dirname(path.join(opts.dir, entry.fileName))
 
-        mkdirp(destDir, function (err) {
-          if (err) {
-            cancelled = true
-            zipfile.close()
-            return cb(err)
-          }
-
+        mkdirp(destDir).then(function () {
           fs.realpath(destDir, function (err, canonicalDestDir) {
             if (err) {
               cancelled = true
@@ -90,6 +84,12 @@ module.exports = function (zipPath, opts, cb) {
               zipfile.readEntry()
             })
           })
+        }).catch(function (err) {
+          if (err) {
+            cancelled = true
+            zipfile.close()
+            return cb(err)
+          }
         })
       })
 
@@ -147,13 +147,7 @@ module.exports = function (zipPath, opts, cb) {
         if (!isDir) destDir = path.dirname(dest)
 
         debug('mkdirp', {dir: destDir})
-        mkdirp(destDir, function (err) {
-          if (err) {
-            debug('mkdirp error', destDir, {error: err})
-            cancelled = true
-            return done(err)
-          }
-
+        mkdirp(destDir).then(function () {
           if (isDir) return done()
 
           debug('opening read stream', dest)
@@ -198,6 +192,12 @@ module.exports = function (zipPath, opts, cb) {
               }))
             }
           })
+        }).catch(function (err) {
+          if (err) {
+            debug('mkdirp error', destDir, {error: err})
+            cancelled = true
+            return done(err)
+          }
         })
       }
     })
